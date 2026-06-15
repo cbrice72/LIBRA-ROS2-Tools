@@ -417,5 +417,5 @@ class PathAnalyzer:
 
 
 if __name__ == "__main__":
-    analyzer = PathAnalyzer(csv_file="tip_path.csv")
+    analyzer = PathAnalyzer(csv_file="../../../tip_path.csv")
     analyzer.run()
