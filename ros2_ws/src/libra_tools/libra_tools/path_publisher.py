@@ -73,6 +73,14 @@ class PathPublisher(Node):
         """
         # Update timestamp
         self._path_msg.header.stamp = self.get_clock().now().to_msg()
+
+        # Check if necessary data is being published
+        if not self._tf_buffer.can_transform(self._base_frame_id, self._child_frame_id, Time()):
+            self.get_logger().warn(
+                f"Data not available: '{self._base_frame_id}' and/or '{self._child_frame_id}' do not exist in the TF tree yet", 
+                throttle_duration_sec=5.0
+            )
+            return
         
         try:
             # Look up TF (Fixed Frame -> Child Frame)
@@ -97,7 +105,7 @@ class PathPublisher(Node):
             
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             # Handle errors without failing
-            self.get_logger().warn(f"Error looking up {self._base_frame_id} to {self._child_frame_id}: {e}", throttle_duration_sec=1.0)
+            self.get_logger().warn(f"TF failure looking up {self._base_frame_id} to {self._child_frame_id}: {e}", throttle_duration_sec=1.0)
 
     def _on_param_change(self, params):
         """
