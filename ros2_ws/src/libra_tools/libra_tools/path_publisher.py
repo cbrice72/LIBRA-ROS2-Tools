@@ -122,13 +122,13 @@ class PathPublisher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    tip__path_publisher = PathPublisher()
+    node = PathPublisher()
     try:
-        rclpy.spin(tip__path_publisher)
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        tip__path_publisher.destroy_node()
+        node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == '__main__':
