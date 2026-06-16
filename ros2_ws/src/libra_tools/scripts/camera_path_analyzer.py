@@ -31,7 +31,7 @@ class PathAnalyzer:
     """
 
     def __init__(self, csv_file, voxel_size=0.05, rays_per_pose=200):
-        print(f"<< Running PathAnalyzer on {csv_file} >>")
+        print(f"\n<< Running PathAnalyzer on {csv_file} >>\n")
         sleep(2)  # allow user to read printout
 
         # Known intrinsics
@@ -71,20 +71,13 @@ class PathAnalyzer:
         self._compute_bounding_box()
         self._compute_convex_hull()
         self._estimate_scan_volume()
-        self._plot_scan_visualization()
-        
-        print("================================")
-        print(f"Trajectory length: {self._total_path_length:.3f} m (w/ {len(self._positions)} samples)")
-        print(f"Workspace envelope: X={self._workspace_bounds[0]:.3f} m, Y={self._workspace_bounds[1]:.3f} m, Z={self._workspace_bounds[2]:.3f} m")
-        print(f"Volume traversed by camera: {self._hull_volume:.3f} m^3")
-        print(f"Estimated scanned volume: {self._scanned_volume:.3f} m^3")
-        print(f"  (mesh saved to: {self._out_ply_filepath})")
-        print(f"Scan inefficiency (redundancy factor): {self._scan_redundancy:.2f}")
 
         """
         NOTE: The following points explain non-trivial metrics.
+
           - "Estimated scanned volume":
               This is an UPPER BOUND and ignores occlusion.
+
           - "Scan inefficiency (redundancy factor)":
               We get this from "R = total rays cast / unique voxels hit", where
               R>1 means overlapping views (higher = more revisits).
@@ -99,15 +92,24 @@ class PathAnalyzer:
               based on Monte-Carlo frustrum sampling.
         """
 
-        print("================================")
+        print("\n================================")
+        print(f"Trajectory length: {self._total_path_length:.3f} m (w/ {len(self._positions)} samples)")
+        print(f"Workspace envelope: X={self._workspace_bounds[0]:.3f} m, Y={self._workspace_bounds[1]:.3f} m, Z={self._workspace_bounds[2]:.3f} m")
+        print(f"Volume traversed by camera: {self._hull_volume:.3f} m^3")
+        print(f"Estimated scanned volume: {self._scanned_volume:.3f} m^3")
+        print(f"  (mesh saved to: {self._out_ply_filepath})")
+        print(f"Scan inefficiency (redundancy factor): {self._scan_redundancy:.2f}")
+        print("================================\n")
         t_end = perf_counter()
-        print(f"Script ran in {t_end - t_start:.3f} s")
+        print(f"Script ran in {t_end - t_start:.3f} s\n")
+
+        self._plot_scan_visualization()
 
     def _load_csv(self):
         """
         Loads nav_msgs/Path data from a CSV file.
         """
-        print("Loading nav_msgs/Path data from CSV...")
+        print("[1/5] Loading nav_msgs/Path data from CSV... ", end="")
 
         try:
             # Extract positions and orientations
@@ -118,64 +120,64 @@ class PathAnalyzer:
             # Convert quaternions to scipy Rotations
             self._rotations = R.from_quat(quats)
         except FileNotFoundError:
-            print("Loading nav_msgs/Path data from CSV... ERROR")
-            print(f"  File not found: {self._in_csv_filepath}")
+            print("ERROR")
+            print(f"    File not found: {self._in_csv_filepath}")
             exit(1)
         except Exception as e:
-            print("Loading nav_msgs/Path data from CSV... ERROR")
-            print(f"  Unexpected error: {e}")
+            print("ERROR")
+            print(f"        Unexpected error: {e}")
             exit(1)
 
-        print("Loading nav_msgs/Path data from CSV... SUCCESS")
+        print("SUCCESS")
 
     def _compute_path_metrics(self):
         """
         Computes total trajectory length based on segment distances.
         """
-        print("Computing traversed path length...")
+        print("[2/5] Computing traversed path length... ", end="")
 
         # Compute total path length by summing segment lengths
         diffs = np.diff(self._positions, axis=0)
         segment_lengths = np.linalg.norm(diffs, axis=1)
         self._total_path_length = np.sum(segment_lengths)
 
-        print("Computing traversed path length... SUCCESS")
+        print("SUCCESS")
 
     def _compute_bounding_box(self):
         """
         Computes the axis-aligned bounding box of the Path.
         """
-        print("Computing axis-aligned workspace bounds...")
+        print("[3/5] Computing axis-aligned workspace bounds... ", end="")
 
         # Batch-compute min and max along each axis
         min_xyz = self._positions.min(axis=0)
         max_xyz = self._positions.max(axis=0)
         self._workspace_bounds = max_xyz - min_xyz
 
-        print("Computing axis-aligned workspace bounds... SUCCESS")
+        print("SUCCESS")
 
     def _compute_convex_hull(self):
         """
         Computes the convex hull created by the Path.
         """
-        print("Computing convex hull of trajectory points...")
+        print("[4/5] Computing convex hull of trajectory points... ", end="")
 
         # Computing convex hull requires 4 or more non-coplanar points
         if len(self._positions) >= 4:
             hull = ConvexHull(self._positions)
             self._hull_volume = hull.volume
         else:
-            print("Computing convex hull of trajectory points... ERROR")
-            print(f"  Not enough points for convex hull: {len(self._positions)} (need >= 4)")
+            print("ERROR")
+            print(f"        Not enough points for convex hull: {len(self._positions)} (need >= 4)")
 
-        print("Computing convex hull of trajectory points... SUCCESS")
+        print("SUCCESS")
 
     def _estimate_scan_volume(self):
         """
         Estimates the volume scanned by the camera using orientation-aware
         frustum ray sampling and voxelization.
         """
-        print("Estimating orientation-aware scanned volume...")
+        print("[5/5] Estimating orientation-aware scanned volume... ", end="")
 
         # For each pose, sample rays within camera frustum
         for pos, rot in zip(self._positions, self._rotations):
@@ -191,13 +193,13 @@ class PathAnalyzer:
         total_samples = len(self._positions) * self._rays_per_pose
         self._scan_redundancy = total_samples / max(num_voxels, 1)  # avoid dividing by zero
 
-        print("Estimating orientation-aware scanned volume... SUCCESS")
+        print("SUCCESS")
 
     def _export_convex_hull_ply(self, points, faces):
         """
         Exports a triangular mesh to an ASCII PLY file.
         """
-        print(f"Saving convex hull mesh...")
+        print("  Saving convex hull mesh... ", end="")
 
         with open(self._out_ply_filepath, "w") as f:
             # Header
@@ -219,7 +221,7 @@ class PathAnalyzer:
             for tri in faces:
                 f.write(f"3 {tri[0]} {tri[1]} {tri[2]}\n")
 
-        print("Saving convex hull mesh... SUCCESS")
+        print("SUCCESS")
 
     def _plot_scan_visualization(self):
         """
@@ -227,12 +229,14 @@ class PathAnalyzer:
         overlaid on the estimated scanned volume (from voxel hull).
         """
 
-        print("Rendering 3D visualization...")
+        print("Rendering 3D visualization... ", end="")
 
         if not self._voxels or self._positions is None:
-            print("Rendering 3D visualization... ERROR")
-            print(f"  Missing voxel and/or position data.")
+            print("ERROR")
+            print(f"    Missing voxel and/or position data")
             return
+        
+        print("")  # newline since there are multiple print statements in this function
 
         # Prep: Estimated scanned volume mesh
         voxels_np = np.array(list(self._voxels), dtype=float)
@@ -302,6 +306,16 @@ class PathAnalyzer:
             zorder=10  # place above all elements
         )
 
+        # Plot: Start & End points
+        ax.scatter(
+            self._positions[0, 0], self._positions[0, 1], self._positions[0, 2],
+            color="lime", s=100, marker="o", edgecolors="black", zorder=15, label="Start"
+        )
+        ax.scatter(
+            self._positions[-1, 0], self._positions[-1, 1], self._positions[-1, -1],
+            color="red", s=100, marker="o", edgecolors="black", zorder=15, label="End"
+        )
+
         # Plot: Ensure everything is visible
         all_points = np.vstack([
             self._positions,
@@ -332,6 +346,16 @@ class PathAnalyzer:
                 color="cyan",
                 linewidth=2.0,
                 label="Camera trajectory"
+            ),
+            Line2D(
+                [0], [0],
+                marker="o", color="none", markerfacecolor="lime", markeredgecolor="black",
+                markersize=10, label="Trajectory Start"
+            ),
+            Line2D(
+                [0], [0],
+                marker="o", color="none", markerfacecolor="red", markeredgecolor="black",
+                markersize=10, label="Trajectory End"
             ),
             Line2D(
                 [0], [0],
@@ -379,12 +403,9 @@ class PathAnalyzer:
         )
 
         # Generate plot
-        #plt.legend()  # moved to custom legend above
         plt.tight_layout()
-        print("Displaying plot (close window to continue)")
+        print("  Displaying plot (close window to continue)")
         plt.show()  # NOTE: blocking call
-
-        print("Rendering 3D visualization... SUCCESS")
 
     def _sample_frustum_rays(self, n):
         """
