@@ -39,6 +39,7 @@ def generate_launch_description():
 
     urdf_model = LaunchConfiguration('urdf_model')
     rviz_config_file = LaunchConfiguration('rviz_config_file')
+    use_joint_state_pub = LaunchConfiguration('use_joint_state_pub')
     use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
 
@@ -51,6 +52,11 @@ def generate_launch_description():
         name='rviz_config_file',
         default_value=default_rviz_config_path,
         description='Full path to RViz config file (default: rviz_basic_settings.rviz)')
+
+    use_joint_state_pub_arg = DeclareLaunchArgument(
+        name='use_joint_state_pub',
+        default_value='True',
+        description='Whether to start the joint_state_publisher node')
 
     use_rviz_arg = DeclareLaunchArgument(
         name='use_rviz',
@@ -76,9 +82,11 @@ def generate_launch_description():
 
     # Publish joint state values for non-fixed joints (see URDF)
     joint_state_publisher_node = Node(
+        condition=IfCondition(use_joint_state_pub),
         package='joint_state_publisher',
         executable='joint_state_publisher',
-        name='joint_state_publisher')
+        name='joint_state_publisher',
+    )
 
     # Subscribe to joint states of robot and publish 3D pose of each link
     robot_state_publisher_node = Node(
@@ -111,6 +119,7 @@ def generate_launch_description():
         # Launch arguments
         urdf_model_arg,
         rviz_config_file_arg,
+        use_joint_state_pub_arg,
         use_rviz_arg,
         use_sim_time_arg,
         # Nodes
