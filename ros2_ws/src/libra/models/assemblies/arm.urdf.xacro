@@ -62,7 +62,7 @@
             </link>
         </xacro:macro>
 
-        <xacro:macro name="joint_subassembly_macro" params="name parent_name origin_xyz origin_rpy">
+        <xacro:macro name="joint_subassembly_macro" params="name parent_name origin_xyz origin_rpy rotation_dir:=1">
             <xacro:property name="inbound_correction" value="0.003"/>
             <xacro:property name="outbound_correction" value="0.005"/>
 
@@ -117,7 +117,7 @@
                 <parent link="${name}_hebi_stator_link"/>
                 <child link="${name}_hebi_rotor_link"/>
                 <origin xyz="${d_hebi_L/2 - 0.073} 0 ${d_hebi_H/2}" rpy="0 0 0"/>
-                <axis xyz="0 0 1"/>  <!-- although this defines a yaw joint, it can be changed by providing a non-zero origin_rpy (see J3) -->
+                <axis xyz="0 0 ${rotation_dir}"/>  <!-- although this defines a yaw joint, it can be changed by providing a non-zero origin_rpy (see J3) -->
                 <limit lower="-${PI}" upper="${PI}" effort="100" velocity="1.0"/>
             </joint>
 
@@ -170,7 +170,7 @@
         </joint>
 
         <xacro:joint_subassembly_macro name="J2" parent_name="L2"
-            origin_xyz="${d_arm_link_L/2 + d_conn_outer_L/2} 0 0" origin_rpy="${PI} 0 0"/>
+            origin_xyz="${d_arm_link_L/2 + d_conn_outer_L/2} 0 0" origin_rpy="${PI} 0 0" rotation_dir="-1"/>
 
         <!-- Arm Segment #3 -->
         <xacro:link_macro name="L3_link"/>
@@ -203,7 +203,7 @@
         </joint>
 
         <xacro:joint_subassembly_macro name="J3" parent_name="J3_conn_adapter"
-            origin_xyz="${d_adapter_L/2 + d_conn_outer_L/2} 0 0" origin_rpy="${PI/2} 0 0"/>
+            origin_xyz="${d_adapter_L/2 + d_conn_outer_L/2} 0 0" origin_rpy="${PI/2} 0 0" rotation_dir="-1"/>
 
         <!-- Arm Segment #4 -->
         <xacro:link_macro name="L4_link"/>
