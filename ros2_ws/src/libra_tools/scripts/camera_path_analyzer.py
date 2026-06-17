@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 
-from math import tan, radians
+# Brief:
+#   A utility script that reads a CSV file containing 3D trajectory data for a
+#   camera (with orientation) and calculates various metrics.
+#
+# Usage:
+#   python3 camera_path_analyzer.py /path/to/csv_file
+
+import argparse
 import os
+import sys
 from time import sleep, perf_counter
 
+from math import tan, radians
 import numpy as np
 import pandas as pd
 from scipy.spatial.transform import Rotation as R
@@ -26,8 +35,8 @@ class PathAnalyzer:
     """
     End-to-end analysis of a moving camera trajectory.
 
-    Generates geometric, kinematic, and sensor-coverage metrics from a recorded
-    tip path (nav_msgs/Path recorded into a CSV) with orientation awareness.
+    Calculates geometric, kinematic, and sensor-coverage metrics from a recorded
+    camera path (nav_msgs/Path recorded into a CSV) with orientation awareness.
     """
 
     def __init__(self, csv_file, voxel_size=0.05, rays_per_pose=200):
@@ -437,6 +446,19 @@ class PathAnalyzer:
         return tuple((point / self._voxel_size).astype(int))
 
 
-if __name__ == "__main__":
-    analyzer = PathAnalyzer(csv_file="../../../tip_path.csv")
+def main(args=None):
+    # Define command line args
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        'csv_path', type=str,  # required
+        help="Path to the CSV file containing trajectory data"
+    )
+    
+    # Parse user args and run visualization pipeline
+    parsed_args = parser.parse_args(args=args if args else sys.argv[1:])
+    analyzer = PathAnalyzer(csv_file=parsed_args.csv_path)
     analyzer.run()
+
+if __name__ == "__main__":
+    main()
