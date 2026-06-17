@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+
+# Brief:
+#   A utility script that reads a CSV file containing 3D trajectory data and
+#   generates 2D and 3D visualizations of the path.
+#
+# Usage:
+#   python3 path_visualizer.py /path/to/csv_file
+#
+# Optional Args:
+#   --gradient GRADIENT_TYPE (one of: "time", "height")
+
+import argparse
+import os
+import sys
+from time import sleep
+
+import numpy as np
+import pandas as pd
+
+from matplotlib.collections import LineCollection
+import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+
+class PathVisualizer:
+    """
+    Visualization utility for a recorded trajectory.
+
+    Use `path_extractor.py` to generate the required CSV file from a rosbag's TF data.
+    """
+
+    def __init__(self, csv_file, gradient_type=None, solid_color="royalblue"):
+        # Validate data
+        if not os.path.exists(csv_file):
+            raise FileNotFoundError(f"CSV file not found: {csv_file}")
+        
+        self._df = pd.read_csv(csv_file)
+
+        required_cols = {"x", "y", "z"}
+        if not required_cols.issubset(self._df.columns):
+            raise ValueError(f"CSV does not contain required columns: {required_cols}")
+        
+        # Store params
+        self._csv_file = csv_file
+        self._gradient_type = gradient_type
+        self._solid_color = solid_color  # Matplotlib color string for solid color rendering
+
+        # Load trajectory data
+        raw_x = self._df["x"].to_numpy()  
+        raw_y = self._df["y"].to_numpy()
+        self._x = -raw_y  # rotate axes to match...
+        self._y = raw_x   # ... ROS coordinate frame
+        self._z = self._df["z"].to_numpy()
+        self._len = len(self._x)
+        self._time = self._df["stamp_sec"] - self._df["stamp_sec"].min()  # elapsed time
+
+        if self._len < 2:
+            raise ValueError("Trajectory must contain two or more points!")
+
+    def _initialize_plots(self) -> tuple[plt.Figure, plt.Axes, plt.Figure, plt.Axes]:
+        """
+        Initializes the 2D and 3D plots with appropriate titles, labels, and axis limits. Returns the figure and axes objects for both plots.
+        """
+        # Calculate axis bounds to minimize whitespace
+        padding = 0.05
+
+        xlim = (self._x.min(), self._x.max())
+        ylim = (self._y.min(), self._y.max())
+        zlim = (self._z.min(), self._z.max())
+        
+        dx = (xlim[1] - xlim[0]) * padding if xlim[1] != xlim[0] else 0.1
+        dy = (ylim[1] - ylim[0]) * padding if ylim[1] != ylim[0] else 0.1
+        dz = (zlim[1] - zlim[0]) * padding if zlim[1] != zlim[0] else 0.1
+
+        # 2D plot (X-Y projection)
+        fig2d = plt.figure("2D Trajectory Window", figsize=(8, 7))
+
+        ax2d = fig2d.add_subplot(1, 1, 1)
+        ax2d.set_title("2D Trajectory Projection (X-Y)", fontsize=12, fontweight="bold")
+        ax2d.set_xlabel("X Position (m)")
+        ax2d.set_ylabel("Y Position (m)")
+        ax2d.grid(True, linestyle="--", alpha=0.6)
+        
+        ax2d.set_xlim(xlim[0] - dx, xlim[1] + dx)
+        ax2d.set_ylim(ylim[0] - dy, ylim[1] + dy)
+
+        ax2d.set_aspect('equal', adjustable='box')  # ensure accurate spatial representation
+
+        # 3D plot
+        fig3d = plt.figure("3D Trajectory Window", figsize=(8, 7))
+
+        ax3d = fig3d.add_subplot(1, 1, 1, projection="3d")
+        ax3d.set_title("3D Trajectory Path", fontsize=12, fontweight="bold")
+        ax3d.set_xlabel("X (m)")
+        ax3d.set_ylabel("Y (m)")
+        ax3d.set_zlabel("Z (m)")
+        
+        ax3d.set_xlim(xlim[0] - dx, xlim[1] + dx)
+        ax3d.set_ylim(ylim[0] - dy, ylim[1] + dy)
+        ax3d.set_zlim(zlim[0] - dz, zlim[1] + dz)
+
+        ax3d.set_box_aspect(  # ensure accurate spatial representation
+            (xlim[1] - xlim[0], ylim[1] - ylim[0], zlim[1] - zlim[0])
+        )
+
+        # Since we rotate the axes in __init__ to match the ROS coordinate frame,
+        # we flip the sign on the X-axis for the graphs to be aligned with reality
+        flip_sign = FuncFormatter(lambda val, pos: f"{-val:g}")
+        ax2d.xaxis.set_major_formatter(flip_sign)
+        ax3d.xaxis.set_major_formatter(flip_sign)
+
+        return fig2d, ax2d, fig3d, ax3d
+
+    def _plot_trajectories(self, ax2d: plt.Axes, ax3d: plt.Axes, cmap: mcolors.Colormap) -> None:
+        """
+        Plots trajectory in 2D and 3D.
+        """
+        if self._gradient_type:
+            # Create sequential segments with color gradients
+            points_2d = np.vstack([self._x, self._y]).T.reshape(-1, 1, 2)
+            segments_2d = np.concatenate([points_2d[:-1], points_2d[1:]], axis=1)
+            
+            points_3d = np.vstack([self._x, self._y, self._z]).T.reshape(-1, 1, 3)
+            segments_3d = np.concatenate([points_3d[:-1], points_3d[1:]], axis=1)
+            
+            if self._gradient_type == "time":
+                # Map colors based on the average time of each line segment
+                time_segments = (self._time.values[:-1] + self._time.values[1:]) / 2.0
+                colors = (time_segments - self._time.min()) / (self._time.max() - self._time.min())
+            elif self._gradient_type == "height":
+                # Map colors based on the average height (Z) of each line segment
+                z_segments = (self._z[:-1] + self._z[1:]) / 2.0
+                colors = (z_segments - self._z.min()) / (self._z.max() - self._z.min())
+            
+            lc2d = LineCollection(segments_2d, array=colors, cmap=cmap, linewidths=2)
+            lc3d = Line3DCollection(segments_3d, array=colors, cmap=cmap, linewidths=2)
+            
+            # Plot the gradient line collections
+            ax2d.add_collection(lc2d)
+            ax3d.add_collection(lc3d)
+
+            ax2d.autoscale_view()
+            ax3d.autoscale_view()
+        else:
+            # Plot the solid-color lines
+            ax2d.plot(self._x, self._y, color=self._solid_color, linewidth=2)
+            ax3d.plot(self._x, self._y, self._z, color=self._solid_color, linewidth=2)
+
+    def _add_annotations(self, fig2d: plt.Figure, ax2d: plt.Axes, fig3d: plt.Figure, ax3d: plt.Axes, cmap: mcolors.Colormap) -> None:
+        """
+        Adds plot annotations such as start/end points, color bars, and legends.
+        """
+        # Key points (start & end)
+        ax2d.scatter(self._x[0], self._y[0], color="green", s=60, zorder=5)
+        ax3d.scatter(self._x[0], self._y[0], self._z[0], color="green", s=60, zorder=5)
+
+        ax2d.scatter(self._x[-1], self._y[-1], color="red", s=60, zorder=5)
+        ax3d.scatter(self._x[-1], self._y[-1], self._z[-1], color="red", s=60, zorder=5)
+
+        # Color bar (2D plot only)
+        if self._gradient_type:
+            if self._gradient_type == "time":
+                norm = plt.Normalize(vmin=self._time.min(), vmax=self._time.max())
+                label = "Elapsed Time (s)"
+            elif self._gradient_type == "height":
+                norm = plt.Normalize(vmin=self._z.min(), vmax=self._z.max())
+                label = "Height / Z Position (m)"
+
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            cbar = fig2d.colorbar(sm, ax=ax2d, pad=0.05, shrink=0.8)
+            cbar.set_label(label, rotation=270, labelpad=15)
+
+        # Legend
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='w', label='Start', markerfacecolor='green', markersize=9),
+            Line2D([0], [0], marker='o', color='w', label='End', markerfacecolor='red', markersize=9)
+        ]
+        
+        path_color = cmap(0.6) if self._gradient_type else self._solid_color
+        legend_elements.insert(0, Line2D([0], [0], color=path_color, lw=2, label='Path'))
+
+        ax2d.legend(handles=legend_elements, loc="best")
+        ax3d.legend(handles=legend_elements, loc="best")
+
+        # Adjust layout to prevent clipping
+        fig2d.tight_layout()
+        fig3d.tight_layout()
+
+    def generate_plots(self):
+        """
+        Generates 2D and 3D trajectory profiles.
+        """
+        cmap = plt.get_cmap("plasma")  # linear perceptually-uniform colormap
+
+        # Generate
+        fig2d, ax2d, fig3d, ax3d = self._initialize_plots()
+        self._plot_trajectories(ax2d, ax3d, cmap)
+        self._add_annotations(fig2d, ax2d, fig3d, ax3d, cmap)
+
+        # Display 
+        print("Displaying figures (close window to finish)")
+        plt.show()
+
+
+def main(args=None):
+    # Define command line args
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        'csv_path', type=str,  # required
+        help="Path to the CSV file containing trajectory data"
+    )
+
+    parser.add_argument(
+        '--gradient', type=str, default=None, choices=["time", "height"],
+        help=f"Gradient type (one of: 'time', 'height')"
+    )
+    
+    # Parse user args and run visualization pipeline
+    parsed_args = parser.parse_args(args=args if args else sys.argv[1:])
+        
+    try:
+        visualizer = PathVisualizer(
+            csv_file=parsed_args.csv_path,
+            gradient_type=parsed_args.gradient,
+            solid_color="royalblue"
+        )
+        visualizer.generate_plots()
+        
+    except Exception as e:
+        print(f"[ERROR] {e}")
+
+
+if __name__ == '__main__':
+    main()
