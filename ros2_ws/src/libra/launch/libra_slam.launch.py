@@ -61,8 +61,8 @@ def generate_launch_description():
     declare_script_mode_cmd = DeclareLaunchArgument(
         'script_mode',
         default_value='full_stack',
-        choices=['full_stack', 'sensors_only', 'replay'],
-        description='Script mode: "full_stack" launches the entire LIBRA SLAM pipeline, "sensors_only" only launches sensors and related nodes, "replay" only launches SLAM nodes reliant on rosbag playback.'
+        choices=['full_stack', 'record', 'replay', 'replay_w_kinematics', 'kinematics_only'],
+        description='Script mode: "full_stack" launches the entire LIBRA SLAM pipeline | "record" only launches sensors and related nodes | "replay" and "replay_w_kinematics" only launch SLAM nodes (reliant on rosbag playback) | "kinematics_only" only launches kinematic nodes (reliant on rosbag playback).'
     )
 
     declare_slam_mode_cmd = DeclareLaunchArgument(
@@ -325,17 +325,28 @@ def generate_launch_description():
                 lidar_en = True
             rtabmap_en = True
 
-        elif script_mode == 'sensors_only':
+        elif script_mode == 'record':
+            kinematics_en = True
             camera_en = True
             if use_lidar:
                 lidar_en = True
 
-        else:  # script_mode == 'replay'
-            kinematics_en = True
+        elif 'replay' in script_mode:  # 'replay' or 'replay_w_kinematics'
             rtabmap_en = True
+            if script_mode == 'replay_w_kinematics':
+                kinematics_en = True
 
             print(f'{c.WARN}[WARN] In replay mode, no input nodes are instantiated.\n  Please run `ros2 bag play <filename>` in a separate terminal when you\'re ready.{c.RESET}')
             time.sleep(2)  # give user time to read warning
+
+        elif 'kinematics_only' in script_mode:
+            kinematics_en = True
+
+            print(f'{c.WARN}[WARN] In kinematics_only mode, no input nodes are instantiated.\n  Please run `ros2 bag play <filename>` in a separate terminal when you\'re ready.{c.RESET}')
+            time.sleep(2)  # give user time to read warning
+
+        else:
+            raise ValueError(f"Invalid script_mode: {script_mode}")
 
         nodes = []
 
@@ -399,7 +410,7 @@ def generate_launch_description():
                 #    output='screen',
                 #))
             
-            else:  # odom_source == 'vio'
+            elif odom_source == 'vio' and rtabmap_en:
                 # Compute visual-inertial odometry
                 nodes.append(Node(
                     package='rtabmap_odom',
