@@ -8,12 +8,14 @@
 #   python3 path_visualizer.py /path/to/csv_file
 #
 # Optional Args:
-#   --gradient GRADIENT_TYPE (one of: "time", "height")
+#   --gradient-2d GRADIENT_TYPE (one of: "time", "height")
+#   --gradient-3d GRADIENT_TYPE
+#   --cmap-2d CMAP_NAME (one of: "viridis", "plasma", "inferno", "magma", "cividis")
+#   --cmap-3d CMAP_NAME
 
 import argparse
 import os
 import sys
-from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -26,6 +28,13 @@ from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 
+CMAP_CHOICES = [  # NOTE: case sensitive!!
+    "Blues_r", "Greens_r", "Greys_r", "Oranges_r", "Purples_r", "Reds_r",  # single hues
+    "viridis", "plasma", "inferno", "magma", "cividis",  # "perceptually uniform sequential"
+    "copper",  "cool",  "winter"  # others
+]
+
+
 class PathVisualizer:
     """
     Visualization utility for a recorded trajectory.
@@ -33,7 +42,8 @@ class PathVisualizer:
     Use `path_extractor.py` to generate the required CSV file from a rosbag's TF data.
     """
 
-    def __init__(self, csv_file, gradient_type=None, solid_color="royalblue"):
+    def __init__(self, csv_file, gradient_type_2d=None, gradient_type_3d=None,
+             cmap_2d="plasma", cmap_3d="plasma", solid_color="royalblue"):
         # Validate data
         if not os.path.exists(csv_file):
             raise FileNotFoundError(f"CSV file not found: {csv_file}")
@@ -46,7 +56,10 @@ class PathVisualizer:
         
         # Store params
         self._csv_file = csv_file
-        self._gradient_type = gradient_type
+        self._gradient_type_2d = gradient_type_2d
+        self._gradient_type_3d = gradient_type_3d
+        self._cmap_2d = cmap_2d  # Matplotlib colormap name for the 2D plot gradient
+        self._cmap_3d = cmap_3d  # Matplotlib colormap name for the 3D plot gradient
         self._solid_color = solid_color  # Matplotlib color string for solid color rendering
 
         # Load trajectory data
@@ -115,42 +128,59 @@ class PathVisualizer:
 
         return fig2d, ax2d, fig3d, ax3d
 
-    def _plot_trajectories(self, ax2d: plt.Axes, ax3d: plt.Axes, cmap: mcolors.Colormap) -> None:
+    def _compute_segment_colors(self, gradient_type: str) -> np.ndarray:
         """
-        Plots trajectory in 2D and 3D.
+        Computes per-segment color values for a gradient line plot based on the given gradient type.
         """
-        if self._gradient_type:
-            # Create sequential segments with color gradients
+        if gradient_type == "time":
+            # Map colors based on the average time of each line segment
+            time_segments = (self._time.values[:-1] + self._time.values[1:]) / 2.0
+            return (time_segments - self._time.min()) / (self._time.max() - self._time.min())
+        elif gradient_type == "height":
+            # Map colors based on the average height (Z) of each line segment
+            z_segments = (self._z[:-1] + self._z[1:]) / 2.0
+            return (z_segments - self._z.min()) / (self._z.max() - self._z.min())
+
+    def _plot_trajectories(self, ax2d: plt.Axes, ax3d: plt.Axes, cmap2d: mcolors.Colormap, cmap3d: mcolors.Colormap) -> None:
+        """
+        Plots trajectory in 2D and 3D, using each plot's own gradient/cmap settings.
+        """
+        # 2D trajectory
+        if self._gradient_type_2d:
             points_2d = np.vstack([self._x, self._y]).T.reshape(-1, 1, 2)
             segments_2d = np.concatenate([points_2d[:-1], points_2d[1:]], axis=1)
-            
+            colors_2d = self._compute_segment_colors(self._gradient_type_2d)
+
+            lc2d = LineCollection(segments_2d, array=colors_2d, cmap=cmap2d, linewidths=2)
+            ax2d.add_collection(lc2d)
+            ax2d.autoscale_view()
+        else:
+            ax2d.plot(self._x, self._y, color=self._solid_color, linewidth=2)
+
+        # 3D trajectory
+        if self._gradient_type_3d:
             points_3d = np.vstack([self._x, self._y, self._z]).T.reshape(-1, 1, 3)
             segments_3d = np.concatenate([points_3d[:-1], points_3d[1:]], axis=1)
-            
-            if self._gradient_type == "time":
-                # Map colors based on the average time of each line segment
-                time_segments = (self._time.values[:-1] + self._time.values[1:]) / 2.0
-                colors = (time_segments - self._time.min()) / (self._time.max() - self._time.min())
-            elif self._gradient_type == "height":
-                # Map colors based on the average height (Z) of each line segment
-                z_segments = (self._z[:-1] + self._z[1:]) / 2.0
-                colors = (z_segments - self._z.min()) / (self._z.max() - self._z.min())
-            
-            lc2d = LineCollection(segments_2d, array=colors, cmap=cmap, linewidths=2)
-            lc3d = Line3DCollection(segments_3d, array=colors, cmap=cmap, linewidths=2)
-            
-            # Plot the gradient line collections
-            ax2d.add_collection(lc2d)
-            ax3d.add_collection(lc3d)
+            colors_3d = self._compute_segment_colors(self._gradient_type_3d)
 
-            ax2d.autoscale_view()
+            lc3d = Line3DCollection(segments_3d, array=colors_3d, cmap=cmap3d, linewidths=2)
+            ax3d.add_collection(lc3d)
             ax3d.autoscale_view()
         else:
-            # Plot the solid-color lines
-            ax2d.plot(self._x, self._y, color=self._solid_color, linewidth=2)
             ax3d.plot(self._x, self._y, self._z, color=self._solid_color, linewidth=2)
 
-    def _add_annotations(self, fig2d: plt.Figure, ax2d: plt.Axes, fig3d: plt.Figure, ax3d: plt.Axes, cmap: mcolors.Colormap) -> None:
+    def _build_legend_elements(self, path_color: str | tuple) -> list[Line2D]:
+        """
+        Builds the legend handle list (path, start, end) for a given path color.
+        """
+        return [
+            Line2D([0], [0], color=path_color, lw=2, label='Path'),
+            Line2D([0], [0], marker='o', color='w', label='Start', markerfacecolor='green', markersize=9),
+            Line2D([0], [0], marker='o', color='w', label='End', markerfacecolor='red', markersize=9),
+        ]
+
+    def _add_annotations(self, fig2d: plt.Figure, ax2d: plt.Axes, fig3d: plt.Figure, ax3d: plt.Axes,
+                      cmap2d: mcolors.Colormap, cmap3d: mcolors.Colormap) -> None:
         """
         Adds plot annotations such as start/end points, color bars, and legends.
         """
@@ -162,45 +192,49 @@ class PathVisualizer:
         ax3d.scatter(self._x[-1], self._y[-1], self._z[-1], color="red", s=60, zorder=5)
 
         # Color bar (2D plot only)
-        if self._gradient_type:
-            if self._gradient_type == "time":
+        if self._gradient_type_2d:
+            if self._gradient_type_2d == "time":
                 norm = plt.Normalize(vmin=self._time.min(), vmax=self._time.max())
                 label = "Elapsed Time (s)"
-            elif self._gradient_type == "height":
+            elif self._gradient_type_2d == "height":
                 norm = plt.Normalize(vmin=self._z.min(), vmax=self._z.max())
                 label = "Height / Z Position (m)"
 
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm = plt.cm.ScalarMappable(cmap=cmap2d, norm=norm)
             sm.set_array([])
             cbar = fig2d.colorbar(sm, ax=ax2d, pad=0.05, shrink=0.8)
             cbar.set_label(label, rotation=270, labelpad=15)
 
         # Legend
-        legend_elements = [
-            Line2D([0], [0], marker='o', color='w', label='Start', markerfacecolor='green', markersize=9),
-            Line2D([0], [0], marker='o', color='w', label='End', markerfacecolor='red', markersize=9)
-        ]
-        
-        path_color = cmap(0.6) if self._gradient_type else self._solid_color
-        legend_elements.insert(0, Line2D([0], [0], color=path_color, lw=2, label='Path'))
+        path_color_2d = cmap2d(0.6) if self._gradient_type_2d else self._solid_color
+        path_color_3d = cmap3d(0.6) if self._gradient_type_3d else self._solid_color
 
-        ax2d.legend(handles=legend_elements, loc="best")
-        ax3d.legend(handles=legend_elements, loc="best")
+        ax2d.legend(handles=self._build_legend_elements(path_color_2d), loc="best")
+        ax3d.legend(handles=self._build_legend_elements(path_color_3d), loc="best")
 
         # Adjust layout to prevent clipping
         fig2d.tight_layout()
         fig3d.tight_layout()
 
+    def _truncate_colormap(self, cmap: mcolors.Colormap, min_val: float = 0.0, max_val: float = 1.0, n: int = 256) -> mcolors.Colormap:
+        """
+        Returns a new colormap that samples a sub-range of an existing colormap.
+        """
+        return mcolors.LinearSegmentedColormap.from_list(
+            f"{cmap.name}_trunc", cmap(np.linspace(min_val, max_val, n))
+        )
+
     def generate_plots(self):
         """
         Generates 2D and 3D trajectory profiles.
         """
-        cmap = plt.get_cmap("plasma")  # linear perceptually-uniform colormap
+        cmap2d = self._truncate_colormap(plt.get_cmap(self._cmap_2d), min_val=0.0, max_val=1.0)
+        cmap3d = self._truncate_colormap(plt.get_cmap(self._cmap_3d), min_val=0.0, max_val=1.0)
 
         # Generate
         fig2d, ax2d, fig3d, ax3d = self._initialize_plots()
-        self._plot_trajectories(ax2d, ax3d, cmap)
-        self._add_annotations(fig2d, ax2d, fig3d, ax3d, cmap)
+        self._plot_trajectories(ax2d, ax3d, cmap2d, cmap3d)
+        self._add_annotations(fig2d, ax2d, fig3d, ax3d, cmap2d, cmap3d)
 
         # Display 
         print("Displaying figures (close window to finish)")
@@ -217,8 +251,24 @@ def main(args=None):
     )
 
     parser.add_argument(
-        '--gradient', type=str, default=None, choices=["time", "height"],
-        help=f"Gradient type (one of: 'time', 'height')"
+        '--gradient-2d', type=str, default=None,
+        choices=["time", "height"],
+        help="Gradient type for the 2D plot"
+    )
+    parser.add_argument(
+        '--gradient-3d', type=str, default=None,
+        choices=["time", "height"],
+        help="Gradient type for the 3D plot"
+    )
+    parser.add_argument(
+        '--cmap-2d', type=str, default="viridis",
+        choices=CMAP_CHOICES,
+        help="Matplotlib colormap name for the 2D plot (default: viridis)"
+    )
+    parser.add_argument(
+        '--cmap-3d', type=str, default="viridis",
+        choices=CMAP_CHOICES,
+        help="Matplotlib colormap name for the 3D plot (default: viridis)"
     )
     
     # Parse user args and run visualization pipeline
@@ -227,7 +277,10 @@ def main(args=None):
     try:
         visualizer = PathVisualizer(
             csv_file=parsed_args.csv_path,
-            gradient_type=parsed_args.gradient,
+            gradient_type_2d=parsed_args.gradient_2d,
+            gradient_type_3d=parsed_args.gradient_3d,
+            cmap_2d=parsed_args.cmap_2d,
+            cmap_3d=parsed_args.cmap_3d,
             solid_color="royalblue"
         )
         visualizer.generate_plots()
