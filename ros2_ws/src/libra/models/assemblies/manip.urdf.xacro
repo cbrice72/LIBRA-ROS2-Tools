@@ -4,7 +4,7 @@
 /// @brief  LIBRA-I manipulator model definition.
 ///         Requires include at top level: `common/common.urdf.xacro`.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">

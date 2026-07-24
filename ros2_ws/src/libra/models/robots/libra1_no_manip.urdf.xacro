@@ -3,7 +3,7 @@
 /// @file   libra1_no_manip.urdf.xacro
 /// @brief  LIBRA-I (base 5-DoF arm only) model constructor.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot name="LIBRA-I" xmlns:xacro="http://www.ros.org/wiki/xacro">
