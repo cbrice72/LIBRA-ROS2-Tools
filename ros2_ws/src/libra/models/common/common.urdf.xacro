@@ -3,7 +3,7 @@
 /// @file   common.urdf.xacro
 /// @brief  Xacro definitions for common properties, materials, and macros.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">

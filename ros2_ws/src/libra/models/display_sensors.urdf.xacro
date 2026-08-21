@@ -3,7 +3,7 @@
 /// @file   display_sensors.urdf.xacro
 /// @brief  LIBRA-I sensor suite model constructor.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot name="Sensor_Suite" xmlns:xacro="http://www.ros.org/wiki/xacro">

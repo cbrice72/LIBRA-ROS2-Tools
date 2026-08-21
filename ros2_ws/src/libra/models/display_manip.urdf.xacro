@@ -3,7 +3,7 @@
 /// @file   display_manip.urdf.xacro
 /// @brief  LIBRA-I manipulator model constructor.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot name="LIBRA-I_Manip" xmlns:xacro="http://www.ros.org/wiki/xacro">

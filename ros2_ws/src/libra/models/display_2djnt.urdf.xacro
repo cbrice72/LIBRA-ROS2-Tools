@@ -3,7 +3,7 @@
 /// @file   display_2djnt.urdf.xacro
 /// @brief  LIBRA-I 2DJNT (2-DoF joint) model constructor.
 ///
-/// @author brice.c.aa
+/// @author Christian Brice
 ****************************************************************************-->
 
 <robot name="LIBRA-I_2DJNT" xmlns:xacro="http://www.ros.org/wiki/xacro">
