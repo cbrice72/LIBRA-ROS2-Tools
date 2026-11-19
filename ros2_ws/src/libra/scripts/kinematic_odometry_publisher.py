@@ -36,9 +36,9 @@ class KinematicOdometryPublisher(Node):
         self.tf_buffer_ = tf2_ros.Buffer()
         self.tf_listener_ = tf2_ros.TransformListener(self.tf_buffer_, self)
         
-        # Joint state tracking
-        self.current_joint_velocities_ = None
-        self.expected_joints_ = ['Roll', 'Pitch', 'J1', 'J2', 'J3', 'Static-Manip']
+        # Joint state tracking (merged by name, since each node publishes its own joints)
+        self.joint_velocities_ = {}
+        self.expected_joints_ = ['Roll', 'Pitch', 'J1', 'J2', 'J3']  # Static-Manip is always 0
         
         # Publishers and Subscribers
         self.joint_sub_ = self.create_subscription(
@@ -57,16 +57,10 @@ class KinematicOdometryPublisher(Node):
 
     def joint_states_callback(self, msg):
         """
-        Store current joint velocities for twist computation.
+        Store the latest velocity of each joint in the message, for twist computation.
+        (Mocked joints carry no velocity, so they're skipped.)
         """
-        if msg.name != self.expected_joints_:
-            # Expecting [Roll, Pitch, J1, J2, J3, Static-Manip]
-            self.get_logger().warn(f"Unexpected joint order: {msg.name}", throttle_duration_sec=5.0)
-            return
-            
-        if len(msg.velocity) >= 6:
-            # There should only be 6 joints: 2-DoF Base, 3-DoF Arm, 1-DoF Manip
-            self.current_joint_velocities_ = msg.velocity[:6]
+        self.joint_velocities_.update(zip(msg.name, msg.velocity))
 
     def publish_odometry(self):
         """
@@ -130,16 +124,14 @@ class KinematicOdometryPublisher(Node):
         This is a simplified approximation - for exact velocities, compute the Jacobian matrix.
         Returns [vx, vy, vz, wx, wy, wz] or None if no joint data available.
         """
-        if self.current_joint_velocities_ is None:
+        missing = [j for j in self.expected_joints_ if j not in self.joint_velocities_]
+        if missing:
+            self.get_logger().warn(f"No velocity yet for joints: {missing}", throttle_duration_sec=5.0)
             return None
-            
+
         # Extract joint velocities
-        roll_vel = self.current_joint_velocities_[0]
-        pitch_vel = self.current_joint_velocities_[1] 
-        j1_vel = self.current_joint_velocities_[2]
-        j2_vel = self.current_joint_velocities_[3]
-        j3_vel = self.current_joint_velocities_[4]
-        # (Static-Manip is always 0)
+        roll_vel, pitch_vel, j1_vel, j2_vel, j3_vel = (
+            self.joint_velocities_[j] for j in self.expected_joints_)
         
         # Over-simplified approximation
         # TODO: Compute 6x6 Jacobian matrix `J` and use `v = J * q_dot`
