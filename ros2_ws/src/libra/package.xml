@@ -16,6 +16,7 @@
   <!-- Interfaces -->
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>libra_interfaces</exec_depend>
 
   <!-- Kinematics -->
   <exec_depend>joint_state_publisher</exec_depend>
