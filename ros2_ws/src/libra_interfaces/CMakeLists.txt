@@ -16,6 +16,7 @@ find_package(std_msgs REQUIRED)
 # Generate message types
 rosidl_generate_interfaces(
     ${PROJECT_NAME}
+    msg/Counterweight.msg
     msg/CwState.msg
     msg/Diagnostics.msg
     DEPENDENCIES std_msgs
