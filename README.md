@@ -154,6 +154,16 @@ When replaying data, you must launch the following nodes. See `libra_slam.launch
 
 > ***NOTE:*** Ideally, we would just record the /joint_states and let the `robot_state_publisher` generate the `/tf` and `/tf_static`, but since `realsense2_ros` also generates unique `/tf_static` for the camera, we have to record them.
 
+#### **General Diagnostics**
+
+Published by LIBRA App (see `libra_interfaces` for message definitions).
+
+```bash
+/joint_states /joint_targets /libra/diagnostics /libra/cw_state
+```
+
+> ***NOTE:*** The `/libra/*` topics publish data from sources running at a variety of frequencies (for example: CW state: 30 Hz, fluid power: 4 Hz) at the same frequency as the fastest source (i.e., actuators: 100 Hz). Slower sources simply have their latest value republished.
+
 #### **RGB+D Camera**
 
 Published by `realsense2_camera` and `imu_filter_madgwick_node`.
