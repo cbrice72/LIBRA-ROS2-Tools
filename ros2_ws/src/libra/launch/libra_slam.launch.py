@@ -31,8 +31,7 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
-from launch_ros.descriptions import ParameterValue
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import LaunchConfiguration
 
 # --- TABLE OF CONTENTS ---
 #  !Launch Arguments
@@ -353,30 +352,12 @@ def generate_launch_description():
         # --- Kinematics & Odometry Nodes ---
 
         if kinematics_en:
-            # Publish robot frame transforms based on URDF model
-            nodes.append(Node(
-                package='robot_state_publisher',
-                executable='robot_state_publisher',
-                output='screen',
-                parameters=[{
-                    # NOTE: If ANY text in the xacro output can be interpreted as yaml,
-                    # the roslaunch system will try to interpret the ENTIRE text as yaml
-                    # instead of passing on the string. The biggest cause of this false
-                    # interpretation is commenting out xacro calls since the xacro:property
-                    # convention looks a lot like a yaml key:value pair. Comments are not
-                    # removed by xacro so they are included in the output.
-                    # (source: https://answers.ros.org/question/417369/caught-exception-in-launch-see-debug-for-traceback-unable-to-parse-the-value-of-parameter-robot_description-as-yaml/)
-                    'robot_description': ParameterValue(
-                        Command(['xacro ', urdf_model]), value_type=str
-                    )
-                }]
-            ))
-
-            # Tip reach of requested poses, for LIBRA App's gain scheduling
-            nodes.append(Node(
-                package='libra',
-                executable='tip_reach_server.py',
-                output='screen'
+            # Publish robot frame transforms, inferences from kinematics
+            nodes.append(IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    os.path.join(pkg_share, 'launch', 'libra_essentials.launch.py')
+                ]),
+                launch_arguments={'urdf_model': urdf_model}.items()
             ))
         
             # --- Conditional Odometry Nodes ---

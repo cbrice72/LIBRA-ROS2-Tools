@@ -75,6 +75,7 @@ Then, source the project workspace and you're ready to go!
 Run one of the provided configurations.
 
 - `libra_slam`: **primary launch file**; can launch a variety of RTAB-Map/sensor suite configurations.
+- `libra_essentials`: nodes LIBRA App needs without SLAM (robot model TF, tip reach for gain scheduling); included by `libra_slam` whenever it runs kinematics.
 - `model_only`: displays a model in RViz.
 - `sensor_suite`: displays the sensor suite (RealSense + 2D LIDAR) model and data in RViz.
 - `test_lidar`: displays 2D LIDAR data in RViz.
