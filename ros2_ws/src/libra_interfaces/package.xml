@@ -3,7 +3,7 @@
 <package format="3">
   <name>libra_interfaces</name>
   <version>0.1.0</version>
-  <description>Message definitions for the topics LIBRA App publishes</description>
+  <description>Message and service definitions for LIBRA App and its ROS2 tools</description>
   <maintainer email="brice.c.67b9@m.isct.ac.jp">Christian Brice</maintainer>
   <license>MIT</license>
 
@@ -12,6 +12,7 @@
 
   <!-- Interfaces -->
   <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
 

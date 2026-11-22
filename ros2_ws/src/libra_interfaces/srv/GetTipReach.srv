@@ -1,0 +1,7 @@
+# Horizontal distance from the base joint to the arm tip, per pose
+
+sensor_msgs/JointState[] poses  # joint names and positions (rad)
+---
+float64[] reach  # (m), in `poses` order
+bool success
+string message

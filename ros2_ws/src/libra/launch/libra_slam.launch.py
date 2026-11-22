@@ -371,6 +371,13 @@ def generate_launch_description():
                     )
                 }]
             ))
+
+            # Tip reach of requested poses, for LIBRA App's gain scheduling
+            nodes.append(Node(
+                package='libra',
+                executable='tip_reach_server.py',
+                output='screen'
+            ))
         
             # --- Conditional Odometry Nodes ---
 

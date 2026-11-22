@@ -36,6 +36,7 @@ install(
 # Define executable Python nodes
 install(PROGRAMS
     scripts/kinematic_odometry_publisher.py
+    scripts/tip_reach_server.py
     #scripts/static_odometry_publisher.py
     DESTINATION lib/${PROJECT_NAME}
 )

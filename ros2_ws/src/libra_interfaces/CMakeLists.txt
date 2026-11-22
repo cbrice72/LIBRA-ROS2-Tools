@@ -1,6 +1,6 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  Message definitions for LIBRA App's topics; CMakeLists file.
+# @brief  Message and service definitions for LIBRA; CMakeLists file.
 #
 # @author Christian Brice
 ################################################################################
@@ -12,14 +12,16 @@ project(libra_interfaces)
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
-# Generate message types
+# Generate message and service types
 rosidl_generate_interfaces(
     ${PROJECT_NAME}
     msg/Counterweight.msg
     msg/CwState.msg
     msg/Diagnostics.msg
-    DEPENDENCIES std_msgs
+    srv/GetTipReach.srv
+    DEPENDENCIES std_msgs sensor_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)
