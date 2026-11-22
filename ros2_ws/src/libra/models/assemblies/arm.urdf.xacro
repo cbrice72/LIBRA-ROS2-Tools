@@ -17,7 +17,11 @@
         <!-- Arm Links -->
         <xacro:property name="d_arm_link_L" value="0.900"/>
         <xacro:property name="d_arm_link_R" value="0.030"/>
-        <xacro:property name="m_arm_link" value="0.395"/>
+        <!-- NOTE
+            CFRP tube + 2 joint-to-tube connectors (0.395 kg)
+            Arm's cables (0.792 kg) * 1/4
+        -->
+        <xacro:property name="m_arm_link" value="0.593"/>
 
         <!-- Joint Connectors -->
         <xacro:property name="d_conn_outer_L" value="0.076"/>

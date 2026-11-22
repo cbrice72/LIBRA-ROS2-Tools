@@ -29,7 +29,7 @@
         <xacro:property name="lidar_W" value="0.048462"/>
         <xacro:property name="lidar_H" value="0.043979"/>
         <xacro:property name="lidar_L" value="0.050587"/>
-        <xacro:property name="lidar_m" value="0.058"/>
+        <xacro:property name="lidar_m" value="0.059"/>
 
         <!-- RGB-D camera (Intel RealSense D456) -->
         <xacro:property name="camera_W" value="0.123999"/>

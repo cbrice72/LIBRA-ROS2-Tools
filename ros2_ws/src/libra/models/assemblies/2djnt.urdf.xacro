@@ -13,24 +13,31 @@
     <xacro:macro name="spawn_2djnt" params="parent">
 
         <!-- ********************[ PROPERTIES ]******************** -->
+        <!-- NOTE
+            Masses should add up to "2-DoF Joint" in LIBRA-I Specifications.xlsx:
+            - Stator + Rotor = "Housing" + 2x "HEBI X8-16" + "End Joint (to counterweight)" (3.172 kg),
+                               split between stator/rotor in
+            their CAD proportion (2.06:1.32)
+            - Arm Connector = "End Joint (to arm)" (0.388 kg)
+        -->
 
         <!-- Stator (static part) -->
         <xacro:property name="d_2djnt_s_L" value="0.143"/>
         <xacro:property name="d_2djnt_s_W" value="0.165"/>
         <xacro:property name="d_2djnt_s_H" value="0.1565"/>
-        <xacro:property name="m_2djnt_s" value="2.056"/>
+        <xacro:property name="m_2djnt_s" value="1.934"/>
 
         <!-- Rotor (moved part) -->
         <xacro:property name="d_2djnt_r_L" value="0.204"/>
         <xacro:property name="d_2djnt_r_W" value="0.145"/>
         <xacro:property name="d_2djnt_r_H" value="0.090"/>
-        <xacro:property name="m_2djnt_r" value="1.317"/>
+        <xacro:property name="m_2djnt_r" value="1.239"/>
 
         <!-- Arm Connector -->
         <xacro:property name="d_conn_arm_L" value="0.076"/>
         <xacro:property name="d_conn_arm_W" value="0.076"/>
         <xacro:property name="d_conn_arm_H" value="0.0985"/>
-        <xacro:property name="m_conn_arm" value="0.326"/>
+        <xacro:property name="m_conn_arm" value="0.388"/>
 
         <!-- ********************[ LINKS ]******************** -->
         <!-- NOTE

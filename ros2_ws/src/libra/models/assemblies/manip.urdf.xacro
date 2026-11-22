@@ -212,7 +212,12 @@
         <xacro:property name="d_static_L" value="0.060"/>
         <xacro:property name="d_static_W" value="0.070"/>
         <xacro:property name="d_static_H" value="0.070"/>
-        <xacro:property name="m_static" value="0.150"/>
+        <!-- NOTE
+            Static mount (0.064 kg)
+            USB serial converter cable (0.039 kg)
+            Sensor suite fasteners (0.022 kg)
+        -->
+        <xacro:property name="m_static" value="0.125"/>
 
         <!-- Sensor Mounting Bracket -->
         <xacro:property name="d_sensor_bracket_L" value="0.065"/>
