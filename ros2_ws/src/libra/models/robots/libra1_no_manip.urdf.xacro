@@ -13,6 +13,7 @@
     
     <xacro:include filename="$(find libra)/models/assemblies/2djnt.urdf.xacro" />
     <xacro:include filename="$(find libra)/models/assemblies/arm.urdf.xacro" />
+    <xacro:include filename="$(find libra)/models/assemblies/cw.urdf.xacro" />
 
     <!-- Model Construction -->
     <!-- NOTE
@@ -24,5 +25,6 @@
     <link name="base_link"/>
     <xacro:spawn_2djnt parent="base_link"/>
     <xacro:spawn_arm parent="2djnt_out_arm_link"/>
+    <xacro:spawn_cw parent="2djnt_out_cw_link"/>
 
 </robot>

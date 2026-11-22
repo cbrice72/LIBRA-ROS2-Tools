@@ -112,12 +112,20 @@
             <origin xyz="${(d_2djnt_r_L/2 - 0.022) + d_conn_arm_L/2} 0 ${d_2djnt_r_H/2 - 0.020 - d_conn_arm_H/2}" rpy="0 0 0"/>
         </joint>
 
-        <!-- Outbound Link -->
+        <!-- Arm Outbound Link -->
         <link name="2djnt_out_arm_link"/>
         <joint name="arm_conn_to_2d_out_arm" type="fixed">
             <parent link="arm_conn_link"/>
             <child link="2djnt_out_arm_link"/>
             <origin xyz="${d_conn_arm_L/2} 0 -${d_conn_arm_H/2 - 0.038}" rpy="0 0 0"/>
+        </joint>
+
+        <!-- Counterweight Outbound Link -->
+        <link name="2djnt_out_cw_link"/>
+        <joint name="2d_roll_to_2d_out_cw" type="fixed">
+            <parent link="2d_rotor_roll_link"/>
+            <child link="2djnt_out_cw_link"/>
+            <origin xyz="0 0 ${d_2djnt_r_H/2 - 0.020 - d_conn_arm_H + 0.038}" rpy="0 0 ${PI}"/>
         </joint>
 
         <!-- ********************[ GAZEBO CONFIG ]******************** -->

@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<!--***************************************************************************
+/// @file   cw.urdf.xacro
+/// @brief  LIBRA-I variable-mass counterweight (CW) model definition.
+///         Requires include at top level: `common/common.urdf.xacro`.
+///
+/// @author Christian Brice
+****************************************************************************-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- Definition -->
+    <!-- NOTE
+        Passive joints are fixed open. Masses come from LIBRA-I
+        Specifications.xlsx. Water is not modeled.
+    -->
+    <xacro:macro name="spawn_cw" params="parent">
+
+        <!-- ********************[ PROPERTIES ]******************** -->
+
+        <!-- Geometry -->
+        <!-- NOTE
+            Arm positions are relative to where the CW arms' axes meet, below the
+            robot's primary axis
+        -->
+        <xacro:property name="d_cw_axes_offset" value="0.1519385"/>
+        <xacro:property name="d_cw_arms_height" value="-0.010"/>
+        <xacro:property name="a_cw_open" value="${52 * PI / 180.0}"/>
+        <xacro:property name="d_cw_holder_offset" value="0.717"/>
+        <xacro:property name="d_cw_holder_lateral" value="-0.007"/>
+        <xacro:property name="d_cw_holder_height" value="0.040"/>
+
+        <!-- Passive Joint -->
+        <xacro:property name="d_cw_joint_L" value="0.167"/>
+        <xacro:property name="d_cw_joint_W" value="0.188"/>
+        <xacro:property name="d_cw_joint_H" value="0.110"/>
+        <xacro:property name="m_cw_joint" value="1.462"/>
+
+        <!-- Arm Tube (CFRP) -->
+        <xacro:property name="d_cw_tube_L" value="1.000"/>
+        <xacro:property name="d_cw_tube_R" value="0.030"/>
+        <!-- NOTE
+            CFRP tube (0.265 kg)
+            Tube cuffs (0.0345 kg) * 2
+        -->
+        <xacro:property name="m_cw_tube" value="0.334"/>
+
+        <!-- Support Rod -->
+        <xacro:property name="d_cw_rod_R" value="0.006"/>
+        <!-- NOTE
+            Stainless steel rod (0.850 kg)
+            End joints (0.066 kg) * 2
+        -->
+        <xacro:property name="m_cw_rod" value="0.982"/>
+
+        <!-- Bladder Holder -->
+        <xacro:property name="d_cw_holder_L" value="0.516"/>
+        <xacro:property name="d_cw_holder_W" value="0.170"/>
+        <xacro:property name="d_cw_holder_H" value="0.089"/>
+        <!-- NOTE
+            Mounting assembly (0.517 kg)
+            CW hoses and fittings (0.095 kg) * 1/2
+        -->
+        <xacro:property name="m_cw_holder" value="0.564"/>
+
+        <!-- Water Bladders (empty) -->
+        <xacro:property name="m_cw_bladder_3L" value="0.110"/>
+        <xacro:property name="m_cw_bladder_10L" value="0.251"/>
+        <xacro:property name="m_cw_bladder_6L" value="0.214"/>
+
+        <!-- ********************[ MACROS ]******************** -->
+
+        <!-- Free-hanging Water Bladder -->
+        <!-- NOTE
+            Mass sits at the hang point, since a hanging CoM stays below it
+        -->
+        <xacro:macro name="bladder_macro" params="side size offset lateral m mesh_xyz mesh_rpy">
+            <link name="cw_${side}_bladder_${size}_link">
+                <visual>
+                    <origin xyz="${mesh_xyz}" rpy="${mesh_rpy}"/>
+                    <geometry><mesh filename="package://libra/meshes/bladder_${size}.stl" scale="0.001 0.001 0.001"/></geometry>
+                    <material name="white"/>
+                </visual>
+                <xacro:sphere_inertia m="${m}" r="0.010"/>
+            </link>
+            <joint name="cw_${side}_arm_to_bladder_${size}" type="fixed">
+                <parent link="cw_${side}_arm_link"/>
+                <child link="cw_${side}_bladder_${size}_link"/>
+                <origin xyz="${offset} ${lateral} 0.047" rpy="0 0 0"/>
+            </joint>
+        </xacro:macro>
+
+        <!-- Single CW Arm -->
+        <xacro:macro name="cw_subassembly_macro" params="side yaw">
+            <!-- Arm frame -->
+            <link name="cw_${side}_arm_link"/>
+            <joint name="cw_joint_to_cw_${side}_arm" type="fixed">
+                <parent link="cw_joint_link"/>
+                <child link="cw_${side}_arm_link"/>
+                <origin xyz="0 0 ${d_cw_arms_height}" rpy="0 0 ${yaw}"/>
+            </joint>
+
+            <!-- CFRP Tube -->
+            <link name="cw_${side}_tube_link">
+                <visual>
+                    <origin xyz="0 0 0" rpy="0 ${PI/2} ${PI/2}"/>
+                    <geometry><mesh filename="package://libra/meshes/arm-link.stl" scale="0.001 ${0.001 * d_cw_tube_L / 0.930} 0.001"/></geometry>
+                    <material name="gray"/>
+                </visual>
+                <xacro:cylinder_inertia m="${m_cw_tube}" r="${d_cw_tube_R}" h="${d_cw_tube_L}"/>
+            </link>
+            <joint name="cw_${side}_arm_to_tube" type="fixed">
+                <parent link="cw_${side}_arm_link"/>
+                <child link="cw_${side}_tube_link"/>
+                <origin xyz="${0.060 + d_cw_tube_L/2} 0 0" rpy="0 0 0"/>
+            </joint>
+
+            <!-- Support Rod -->
+            <xacro:property name="rod_start" value="${[-0.0541, copysign(0.0691, yaw), 0.0802]}"/>
+            <xacro:property name="rod_end" value="${[d_cw_axes_offset + d_cw_holder_offset * cos(yaw) - d_cw_holder_lateral * sin(yaw),
+                d_cw_holder_offset * sin(yaw) + d_cw_holder_lateral * cos(yaw), d_cw_arms_height + d_cw_holder_height]}"/>
+            <xacro:property name="rod_x" value="${rod_end[0] - rod_start[0]}"/>
+            <xacro:property name="rod_y" value="${rod_end[1] - rod_start[1]}"/>
+            <xacro:property name="rod_z" value="${rod_end[2] - rod_start[2]}"/>
+            <xacro:property name="rod_L" value="${sqrt(rod_x * rod_x + rod_y * rod_y + rod_z * rod_z)}"/>
+            <link name="cw_${side}_rod_link">
+                <visual>
+                    <origin xyz="0 0 0" rpy="0 ${PI/2} 0"/>
+                    <geometry><cylinder length="${rod_L}" radius="${d_cw_rod_R}"/></geometry>
+                    <material name="silver"/>
+                </visual>
+                <xacro:cylinder_inertia m="${m_cw_rod}" r="${d_cw_rod_R}" h="${rod_L}"/>
+            </link>
+            <joint name="${parent}_to_cw_${side}_rod" type="fixed">
+                <parent link="${parent}"/>
+                <child link="cw_${side}_rod_link"/>
+                <origin xyz="${rod_start[0] + rod_x/2} ${rod_start[1] + rod_y/2} ${rod_start[2] + rod_z/2}" rpy="0 ${-atan2(rod_z, sqrt(rod_x * rod_x + rod_y * rod_y))} ${atan2(rod_y, rod_x)}"/>
+            </joint>
+
+            <!-- Bladder Holder -->
+            <link name="cw_${side}_holder_link">
+                <visual>
+                    <origin xyz="0 0 0" rpy="0 0 ${-PI/2}"/>
+                    <geometry><mesh filename="package://libra/meshes/cw_holder.stl" scale="0.001 0.001 0.001"/></geometry>
+                    <material name="black"/>
+                </visual>
+                <xacro:box_inertia m="${m_cw_holder}" x="${d_cw_holder_L}" y="${d_cw_holder_W}" z="${d_cw_holder_H}"
+                    origin_xyz="0.219 0 -0.010"/>
+            </link>
+            <joint name="cw_${side}_arm_to_holder" type="fixed">
+                <parent link="cw_${side}_arm_link"/>
+                <child link="cw_${side}_holder_link"/>
+                <origin xyz="${d_cw_holder_offset} ${d_cw_holder_lateral} ${d_cw_holder_height}" rpy="0 0 0"/>
+            </joint>
+
+            <!-- Bladders -->
+            <xacro:bladder_macro side="${side}" size="3L" offset="0.825" lateral="-0.047" m="${m_cw_bladder_3L}"
+                mesh_xyz="-0.0175 0 0.009" mesh_rpy="0 0 ${PI/2}"/>
+            <xacro:bladder_macro side="${side}" size="10L" offset="0.917" lateral="0.034" m="${m_cw_bladder_10L}"
+                mesh_xyz="0 0 -0.3492" mesh_rpy="${PI/2} 0 ${PI}"/>
+            <xacro:bladder_macro side="${side}" size="6L" offset="1.009" lateral="-0.064" m="${m_cw_bladder_6L}"
+                mesh_xyz="0 0 -0.2992" mesh_rpy="${PI/2} 0 0"/>
+        </xacro:macro>
+
+        <!-- ********************[ LINKS ]******************** -->
+        <!-- NOTE
+            X = forward/red, Y = left/green, Z = upwards/blue
+        -->
+
+        <!-- Passive Joint -->
+        <link name="cw_joint_link">
+            <visual>
+                <origin xyz="${-d_cw_axes_offset} 0 0.0355" rpy="0 0 ${-PI/2}"/>
+                <geometry><mesh filename="package://libra/meshes/cw_passive-joint.stl" scale="0.001 0.001 0.001"/></geometry>
+                <material name="black"/>
+            </visual>
+            <xacro:box_inertia m="${m_cw_joint}" x="${d_cw_joint_L}" y="${d_cw_joint_W}" z="${d_cw_joint_H}"
+                origin_xyz="0.010 0 -0.013"/>
+        </link>
+        <joint name="${parent}_to_cw_joint" type="fixed">
+            <parent link="${parent}"/>
+            <child link="cw_joint_link"/>
+            <origin xyz="${d_cw_axes_offset} 0 0" rpy="0 0 0"/>
+        </joint>
+
+        <!-- Arms (A = robot's left, B = robot's right) -->
+        <xacro:cw_subassembly_macro side="a" yaw="${-a_cw_open}"/>
+        <xacro:cw_subassembly_macro side="b" yaw="${a_cw_open}"/>
+
+    </xacro:macro>
+</robot>
