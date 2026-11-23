@@ -1,7 +1,7 @@
 # Brief:
 #   Nodes LIBRA App needs on the ROS2 side, regardless of whether SLAM is used:
 #   - robot_state_publisher: TF from the URDF model
-#   - tip_reach_server: tip reach of requested poses (for automatic gain scheduling)
+#   - tip_reach_server: tip reach of requested poses (for automatic gain switching)
 #
 # Usage:
 #   $ ros2 launch libra libra_essentials.launch.py
@@ -58,7 +58,7 @@ def generate_launch_description():
         }]
     )
 
-    # Tip reach of requested poses, for LIBRA App's gain scheduling
+    # Tip reach of requested poses, for LIBRA App's gain switching
     tip_reach_server_node = Node(
         package='libra',
         executable='tip_reach_server.py',
