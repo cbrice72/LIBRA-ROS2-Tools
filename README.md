@@ -131,6 +131,8 @@ ros2 run lightwarelidar2 sf45b --ros-args \
 
 ### *Recording a Session*
 
+For convenience, use this script: `ros2_ws/src/libra_tools/scripts/record_run.bash` (see [libra_tools](./ros2_ws/src/libra_tools/README.md#scriptsrecord_runbash)). If you want more fine-grained control, continue reading.
+
 ```bash
 cd ros2_ws
 mkdir bags && cd bags/

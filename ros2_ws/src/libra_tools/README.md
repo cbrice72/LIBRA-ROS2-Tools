@@ -11,6 +11,8 @@ colcon build --packages-select libra_tools
     - [*`libra_tools/path_publisher.py`*](#libra_toolspath_publisherpy)
     - [*`libra_tools/path_to_csv.py`*](#libra_toolspath_to_csvpy)
     - [*`scripts/camera_path_analyzer.py`*](#scriptscamera_path_analyzerpy)
+- [Easy Experiment Recording](#easy-experiment-recording)
+    - [*`scripts/record_run.bash`*](#scriptsrecord_runbash)
 
 ## Tip Path Utilities
 
@@ -48,3 +50,21 @@ Usage:
 ```bash
 python3 camera_path_analyzer.py
 ```
+
+## Easy Experiment Recording
+
+### *`scripts/record_run.bash`*
+
+Records relevant ROS2 topics to `<experiment_dir>/log/rosbag2_<date>_<time>_<profile>/`. There are currently two groups:
+
+- `full`: everything needed to replay SLAM and rebuild an online map (camera, LIDAR, odometry, `/mapGraph`).
+- `light`: joint data, counterweight, IMU (camera @ tip), and logs only.
+
+Usage:
+
+```bash
+./record_run.bash <experiment_dir> <full|light>
+# Press Ctrl+C to stop
+```
+
+> ***NOTE:*** For `full` runs, launch `libra_slam.launch.py` with `working_dir:=<experiment_dir>` so the run's RTAB-Map database is saved next to its rosbag.
