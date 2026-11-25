@@ -93,7 +93,7 @@ For example, to run RTAB-Map in RGB+D mode with the RealSense as the main sensor
 ros2 launch libra libra_slam.launch.py mode:=rgbd use_lidar:=true realsense_config:=/home/brice/repos/LIBRA-ROS/ros2_ws/install/libra/share/libra/config/realsense_all.yaml
 ```
 
-> ***NOTE:*** it is recommended that you also set the parameter `working_dir:=<PATH>` on every launch so as to not get your databases mixed up. For example: `working_dir:=/home/brice/experiments/<YYYY-MM-DD>_<Title>`.
+> ***NOTE:*** each launch saves its own database, `rtabmap_<date>_<time>.db`, in `working_dir` and prints its path. It is recommended that you set `working_dir:=<PATH>` for each experiment. For example: `working_dir:=/home/brice/experiments/<YYYY-MM-DD>_<Title>`. To stop, press Ctrl+C **once** and wait for `Saving database/long-term memory...done!`.
 
 #### **Archived**
 

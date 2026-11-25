@@ -127,7 +127,7 @@ This launches the following five (5) nodes:
 - `rtabmap`, the main SLAM node w/ loop closure detector.
 - `rtabmap_viz`, which brings up the RTAB-Map GUI.
 
-Once finished, save the database in the RTAB-Map GUI by clicking "File" -> "Close database". (TODO: this doesn't exist)
+Once finished, press Ctrl+C **once** and wait for `Saving database/long-term memory...done!`. The database path is printed at launch.
 
 ### *Use Case 2: Camera and LIDAR*
 
@@ -157,7 +157,7 @@ If the LIDAR scans aren't showing up in the RTAB-Map GUI, ensure that the follow
 - "RGB-D SLAM" -> "Local Occupancy Grid" -> select `LiDAR and Camera(s)` under "Sensor from which the local grid is created"
 - "Motion Estimation" -> select `Visual + Odometry` under the first option (motion estimation type)
 
-Once finished, save the database in the RTAB-Map GUI by clicking "File" -> "Close database". (TODO: this doesn't exist)
+Once finished, press Ctrl+C **once** and wait for `Saving database/long-term memory...done!`. The database path is printed at launch.
 
 ## Plotting Statistics
 

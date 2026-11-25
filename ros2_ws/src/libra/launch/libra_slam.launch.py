@@ -22,6 +22,7 @@
 #           realsense_config:=/home/brice/repos/LIBRA-ROS/ros2_ws/install/libra/share/libra/config/realsense_all.yaml \
 #           working_dir:=/home/brice/repos/LIBRA-ROS/ros2_ws/maps
 
+import datetime
 import os
 import time
 
@@ -40,8 +41,12 @@ from launch.substitutions import LaunchConfiguration
 #  !Nodes
 #
 
+# Time RTAB-Map gets to finish saving its database after Ctrl+C
+DB_SAVE_TIMEOUT_S = '300'
+
 class c:  # ANSI color codes for terminal output
     RESET = '\033[0m'
+    INFO = '\033[92m'  # green
     WARN = '\033[93m'  # yellow
 
 def generate_launch_description():
@@ -111,13 +116,7 @@ def generate_launch_description():
     declare_working_dir_cmd = DeclareLaunchArgument(
         'working_dir',
         default_value=default_working_dir,
-        description='Path to RTAB-Map working directory. Defaults to ".rtabmap/" in your user home.'
-    )
-
-    declare_delete_db_cmd = DeclareLaunchArgument(
-        'delete_db',
-        default_value='false',
-        description='Delete previous RTAB-Map database on launch.'
+        description='Path to RTAB-Map working directory, where each launch saves its own database. Defaults to ".rtabmap/" in your user home.'
     )
 
     #--------------------------------------------------------------------------
@@ -255,8 +254,7 @@ def generate_launch_description():
         urdf_model = context.launch_configurations['urdf_model']
         use_lidar = context.launch_configurations['use_lidar'].lower() == 'true'
         lidar_port = context.launch_configurations['lidar_port']
-        working_dir = context.launch_configurations['working_dir']
-        delete_db = context.launch_configurations['delete_db'].lower() == 'true'
+        working_dir = os.path.abspath(os.path.expanduser(context.launch_configurations['working_dir']))
 
         # Get variable parameters
         frame_id_arg = context.launch_configurations['frame_id']
@@ -463,16 +461,23 @@ def generate_launch_description():
         # --- SLAM Nodes ---
 
         if rtabmap_en:
+            # Save unique database on each launch
+            os.makedirs(working_dir, exist_ok=True)
+            db_name = f'rtabmap_{datetime.datetime.now():%Y-%m-%d_%H-%M-%S}.db'
+            database_path = os.path.join(working_dir, db_name)
+            print(f'{c.INFO}[INFO] RTAB-Map database: {database_path}{c.RESET}')
+
             # Primary RTAB-Map SLAM computation
             nodes.append(Node(
                 package='rtabmap_slam',
                 executable='rtabmap',
                 output='screen',
+                sigterm_timeout=DB_SAVE_TIMEOUT_S,
                 parameters=[ rtab_params | slam_extra | {
+                    'database_path': database_path,
                     'Rtabmap/WorkingDirectory': working_dir
                 }],
-                remappings=remaps,
-                arguments=['-d'] if delete_db else []
+                remappings=remaps
             ))
 
             # RTAB-Map's custom RViz GUI
@@ -497,7 +502,6 @@ def generate_launch_description():
         declare_use_lidar_cmd,
         declare_lidar_port_cmd,
         declare_working_dir_cmd,
-        declare_delete_db_cmd,
         # Nodes
         OpaqueFunction(function=launch_nodes)
     ])
