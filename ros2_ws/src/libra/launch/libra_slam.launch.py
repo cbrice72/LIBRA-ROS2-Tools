@@ -145,17 +145,14 @@ def generate_launch_description():
         'wait_imu_to_init': True,
         # Mapping
         'RGBD/OptimizeFromGraphEnd': 'false',  # correct all previous poses based on latest pose (/odom and /map will always match)
-        'RGBD/OptimizeStrategy': '2',  # 1 = g2o, 2 = GTSAM
-        'RGBD/OptimizeRobust': 'true',  # use Vertigo to reduce the influence of "weak" (outlier) loop closures
-        'RGBD/OptimizeMaxError': '0',  # must be 0 if RGBD/OptimizeRobust is true
+        'RGBD/OptimizeMaxError': '3.0',  # reject loop closures whose error is > 3 std devs (default; 0 = no check)
         # Odometry and Registration
         'Kp/NndrRatio': '0.80',  # default: 0.80
         'Kp/NNStrategy': '1',  # FLANN KdTree, build for float descriptors like SIFT
         'Odom/FillInfoData': 'true',
-        'Odom/MinInliers': '20',
-        'Reg/Force3DoF': 'true',  # roll, pitch, and Z must be explicitly provided (i.e., won't be estimated)
+        'Reg/Force3DoF': 'false',  # true = x, y, yaw only (ground robot); sensor suite should also be able to move in z, roll, pitch
         'Vis/FeatureType': '1',  # SIFT, better than GFTT+ORB in large-scale env
-        'Vis/MaxDepth': '6.0',  # RealSense D456's max accurate range
+        'Vis/MaxDepth': '0',  # no limit; a ~7.5 m ceiling fills most of the view, and odometry is lost without it
     }
 
     # Mode-specific
@@ -219,12 +216,11 @@ def generate_launch_description():
         # Input Topics
         'subscribe_scan_cloud': True,
         # Mapping
-        'Grid/FromDepth': 'false',  # true: depth, false: laser scans
         'Grid/Sensor': '1',  # construct occupancy grid map using cloud projection
         'RGBD/NeighborLinkRefining': 'true',  # correct odom with laser scans + ICP
         'RGBD/ProximityBySpace': 'true',  # find local loop closures based on robot position using ICP
         # Odometry and Registration
-        'Reg/Strategy': '2',  # improve VSLAM with laser scans
+        'Reg/Strategy': '0',  # visual-only; '2' (ICP) means RTAB-Map forces visual data to match laser data, and currently they rarely overlap
         'Icp/VoxelSize': '0.05',  # in m; filter scans down to 5 cm voxel before registration
         'Icp/MaxCorrespondenceDistance': '0.1',  # in m; max distance between points during registration
     }
@@ -300,7 +296,6 @@ def generate_launch_description():
 
         # TODO: the following is for testing purposes only
         slam_extra |= {
-            'Rtabmap/LoopThr': '0.05',  # temporarily lower from 0.11
             'RGBD/AngularUpdate': '0.1',  # temporarily raise from 0.01  
             'RGBD/LinearUpdate': '0.1',   # temporarily raise from 0.01
         }
