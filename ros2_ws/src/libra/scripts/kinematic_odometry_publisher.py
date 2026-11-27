@@ -107,8 +107,10 @@ class KinematicOdometryPublisher(Node):
                 odom_msg.twist.twist.angular.z = 0.0
             
             # Set reasonable covariance (low values = high confidence)
-            pose_cov = [0.001] * 36
-            twist_cov = [0.01] * 36  # slightly less confident in velocities
+            # NOTE: Variances go on the diagonal only. A 6x6 matrix filled with one value
+            #       can't be inverted, which makes RTAB-Map abort on its first node.
+            pose_cov = np.diag([0.001] * 6).ravel().tolist()
+            twist_cov = np.diag([0.01] * 6).ravel().tolist()  # slightly less confident in velocities
             odom_msg.pose.covariance = pose_cov
             odom_msg.twist.covariance = twist_cov
             
